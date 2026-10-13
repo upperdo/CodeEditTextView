@@ -195,11 +195,20 @@ public final class EmphasisManager {
     }
 
     private func makeShapePath(forStyle emphasisStyle: EmphasisStyle, range: NSRange) -> NSBezierPath? {
+        // Guard against stale/out-of-bounds ranges (e.g. emphasis added from a parse snapshot
+        // that no longer matches the current text after an edit). Drawing with such a range
+        // would trap in the layout manager.
+        guard let textView = textView else { return nil }
+        let length = textView.textStorage?.length ?? 0
+        guard range.location >= 0, range.length >= 0, range.location + range.length <= length else {
+            return nil
+        }
+
         switch emphasisStyle {
         case .standard, .outline:
-            return textView?.layoutManager.roundedPathForRange(range, cornerRadius: emphasisStyle.shapeRadius)
+            return textView.layoutManager?.roundedPathForRange(range, cornerRadius: emphasisStyle.shapeRadius)
         case .underline:
-            guard let layoutManager = textView?.layoutManager else {
+            guard let layoutManager = textView.layoutManager else {
                 return nil
             }
             let lineHeight = layoutManager.estimateLineHeight()
