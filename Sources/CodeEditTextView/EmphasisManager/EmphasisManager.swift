@@ -159,17 +159,21 @@ public final class EmphasisManager {
             }
 
             // Update bounds and position
-            if let cgPath = emphasis.layer.path {
+            if let cgPath = emphasis.layer.path, !cgPath.isEmpty {
                 let boundingBox = cgPath.boundingBox
-                emphasis.layer.bounds = boundingBox
-                emphasis.layer.position = CGPoint(x: boundingBox.midX, y: boundingBox.midY)
+                if !boundingBox.isNull, !boundingBox.isEmpty {
+                    emphasis.layer.bounds = boundingBox
+                    emphasis.layer.position = CGPoint(x: boundingBox.midX, y: boundingBox.midY)
+                }
             }
 
             // Update text layer if it exists
-            if let textLayer = emphasis.textLayer {
-                var bounds = shapePath.bounds
-                bounds.origin.y += 1 // Move down by 1 pixel
-                textLayer.frame = bounds
+            if let textLayer = emphasis.textLayer, let cgPath = emphasis.layer.path, !cgPath.isEmpty {
+                var bounds = cgPath.boundingBox
+                if !bounds.isNull, !bounds.isEmpty {
+                    bounds.origin.y += 1 // Move down by 1 pixel
+                    textLayer.frame = bounds
+                }
             }
         }
     }
@@ -182,7 +186,13 @@ public final class EmphasisManager {
         let layer = createShapeLayer(shapePath: shapePath, emphasis: emphasis)
         textView?.layer?.insertSublayer(layer, at: 1)
 
-        let textLayer = createTextLayer(for: emphasis)
+        // Text layers are only meaningful for filled styles (search/etc.); underlines don't need one.
+        let textLayer: CATextLayer?
+        if case .underline = emphasis.style {
+            textLayer = nil
+        } else {
+            textLayer = createTextLayer(for: emphasis)
+        }
         if let textLayer = textLayer {
             textView?.layer?.addSublayer(textLayer)
         }
@@ -206,7 +216,12 @@ public final class EmphasisManager {
 
         switch emphasisStyle {
         case .standard, .outline:
-            return textView.layoutManager?.roundedPathForRange(range, cornerRadius: emphasisStyle.shapeRadius)
+            guard let path = textView.layoutManager?.roundedPathForRange(
+                range, cornerRadius: emphasisStyle.shapeRadius
+            ), !path.isEmpty else {
+                return nil
+            }
+            return path
         case .underline:
             guard let layoutManager = textView.layoutManager else {
                 return nil
@@ -218,7 +233,9 @@ public final class EmphasisManager {
                 path.move(to: NSPoint(x: rect.minX, y: rect.maxY - lineBottomPadding))
                 path.line(to: NSPoint(x: rect.maxX, y: rect.maxY - lineBottomPadding))
             }
-            return path
+            // An empty path (e.g. a range that maps to no rendered rects) must not be returned:
+            // `NSBezierPath.bounds` throws "No current point" for it.
+            return path.isEmpty ? nil : path
         }
     }
 
@@ -258,10 +275,12 @@ public final class EmphasisManager {
         }
 
         // Set bounds of the layer; needed for the scale animation
-        if let cgPath = layer.path {
+        if let cgPath = layer.path, !cgPath.isEmpty {
             let boundingBox = cgPath.boundingBox
-            layer.bounds = boundingBox
-            layer.position = CGPoint(x: boundingBox.midX, y: boundingBox.midY)
+            if !boundingBox.isNull, !boundingBox.isEmpty {
+                layer.bounds = boundingBox
+                layer.position = CGPoint(x: boundingBox.midX, y: boundingBox.midY)
+            }
         }
 
         return layer
@@ -270,7 +289,7 @@ public final class EmphasisManager {
     private func createTextLayer(for emphasis: Emphasis) -> CATextLayer? {
         guard let textView = textView,
               let layoutManager = textView.layoutManager,
-              let shapePath = layoutManager.roundedPathForRange(emphasis.range),
+              let shapePath = layoutManager.roundedPathForRange(emphasis.range), !shapePath.isEmpty,
               let originalString = textView.textStorage?.attributedSubstring(from: emphasis.range) else {
             return nil
         }
