@@ -37,7 +37,7 @@ extension TextView {
         setUpMouseAutoscrollTimer()
     }
 
-    /// Single click, if control-shift we add a cursor
+    /// Single click, if control-shift or option we add a cursor
     /// if shift, we extend the selection to the click location
     /// else we set the cursor
     fileprivate func handleSingleClick(event: NSEvent, offset: Int) {
@@ -48,7 +48,7 @@ extension TextView {
             return
         }
         let eventFlags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        if eventFlags == [.control, .shift] {
+        if eventFlags == [.control, .shift] || eventFlags == [.option] {
             unmarkText()
             selectionManager.addSelectedRange(NSRange(location: offset, length: 0))
         } else if eventFlags.contains(.shift) {
