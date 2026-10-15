@@ -178,7 +178,11 @@ public final class TextAttachmentManager {
             guard let selectionManager = notification.object as? TextSelectionManager else {
                 return
             }
-            let selectedSet = IndexSet(ranges: selectionManager.textSelections.map({ $0.range }))
+            // Guard against invalid ranges: `IndexSet(ranges:)` force-unwraps `Range(range)` and would crash.
+            let ranges = selectionManager.textSelections
+                .map({ $0.range })
+                .filter({ $0.location >= 0 && $0.length >= 0 })
+            let selectedSet = IndexSet(ranges: ranges)
             for attachment in self?.orderedAttachments ?? [] {
                 let isSelected = selectedSet.contains(integersIn: attachment.range)
                 if attachment.attachment.isSelected != isSelected {

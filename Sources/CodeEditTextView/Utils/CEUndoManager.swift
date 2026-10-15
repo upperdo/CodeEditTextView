@@ -142,6 +142,8 @@ public class CEUndoManager: UndoManager {
             }
         } else {
             let mergedRanges = mutations.reduce(into: IndexSet(), { set, mutation in
+                // Guard against invalid ranges: `insert(range:)` force-unwraps `Range(range)`.
+                guard mutation.range.location >= 0, mutation.range.length >= 0 else { return }
                 set.insert(range: mutation.range)
             })
             textView?.selectionManager.setSelectedRanges(mergedRanges.rangeView.map { NSRange($0) })
