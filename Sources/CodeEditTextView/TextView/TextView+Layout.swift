@@ -82,7 +82,10 @@ extension TextView {
             frame.size.height = newHeight
             // Re-layout and redraw so the newly revealed line (e.g. after inserting a newline at the
             // end of the document) is laid out and drawn immediately, instead of on the next edit.
-            didUpdate = true
+            // Note: don't call `layoutManager.setNeedsLayout()` here — it clears the visible-line cache
+            // and forces a full re-layout, which can momentarily blank an existing line.
+            needsLayout = true
+            needsDisplay = true
         }
 
         if wrapLines && frame.size.width != availableSize.width {
