@@ -73,8 +73,13 @@ extension TextSelectionManager {
 
             let maxRect: CGRect
             let endOfLine = fragmentRange.max <= range.max || range.contains(fragmentRange.max)
-            let endOfDocument = intersectionRange.max == layoutManager.lineStorage.length
             let emptyLine = linePosition.range.isEmpty
+            // When the document ends with a line break there is a trailing empty line, and the last *content*
+            // line's range also ends at the document length (it includes the newline). In that case that line is
+            // not really the end of the document for selection purposes — it should still be selected to the end of
+            // the line. Only treat it as the document end when the file does not end with a line break.
+            let endOfDocument = intersectionRange.max == layoutManager.lineStorage.length
+                && !Self.endsWithLineBreak(layoutManager)
 
             // If the selection is at the end of the line, or contains the end of the fragment, and is not the end
             // of the document, we select the entire line to the right of the selection point.
@@ -102,5 +107,12 @@ extension TextSelectionManager {
         }
 
         return fillRects
+    }
+
+    /// Whether the layout manager's text ends with a line break (i.e. there's a trailing empty line).
+    private static func endsWithLineBreak(_ layoutManager: TextLayoutManager) -> Bool {
+        guard let storage = layoutManager.textStorage, storage.length > 0 else { return false }
+        let last = (storage.string as NSString).character(at: storage.length - 1)
+        return last == 0x0A || last == 0x0D
     }
 }
