@@ -12,20 +12,23 @@ extension TextSelectionManager {
         let delta = replacementLength == 0 ? -range.length : replacementLength
         for textSelection in self.textSelections {
             if textSelection.range.location > range.max {
+                // Entirely after the edit: shift it.
                 textSelection.range.location = max(0, textSelection.range.location + delta)
                 textSelection.range.length = 0
             } else if textSelection.range.intersection(range) != nil
                         || textSelection.range == range
                         || (textSelection.range.isEmpty && textSelection.range.location == range.max) {
+                // Overlaps (or sits at the end of) the edit: collapse to the edit's new end.
                 if replacementLength > 0 {
                     textSelection.range.location = range.location + replacementLength
                 } else {
                     textSelection.range.location = range.location
                 }
                 textSelection.range.length = 0
-            } else {
-                textSelection.range.length = 0
             }
+            // Otherwise the selection is entirely before the edit; leave it untouched. (Previously this
+            // collapsed such selections to zero length, which broke multi-cursor edits by discarding the
+            // other selections before their own replacement was applied.)
         }
 
         // Clean up duplicate selection ranges

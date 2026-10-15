@@ -27,17 +27,23 @@ extension TextView {
         let query = text.substring(with: primary.range)
         guard !query.isEmpty else { return }
 
-        let searchStart = selectionManager.textSelections.map(\.range.max).max() ?? primary.range.max
-        var found = text.range(of: query, options: [], range: NSRange(location: searchStart, length: 0))
+        let searchStart = min(selectionManager.textSelections.map(\.range.max).max() ?? primary.range.max, text.length)
+        var found = text.range(
+            of: query,
+            options: [],
+            range: NSRange(location: searchStart, length: text.length - searchStart)
+        )
         if found.location == NSNotFound {
             // Wrap around from the start.
-            let wrapped = text.range(of: query, options: [], range: NSRange(location: 0, length: text.length))
-            if wrapped.location != NSNotFound, wrapped.location < searchStart {
+            let wrapped = text.range(of: query, options: [], range: NSRange(location: 0, length: searchStart))
+            if wrapped.location != NSNotFound {
                 found = wrapped
             }
         }
         guard found.location != NSNotFound else { return }
         selectionManager.addSelectedRange(found)
+        // Bring the newly added occurrence into view (no-op if it is already visible).
+        scrollToRange(found, center: true)
     }
 
     /// Selects every occurrence of the current selection (or the word under the cursor).
