@@ -80,7 +80,9 @@ extension TextView {
 
         if newHeight >= availableSize.height && frame.size.height != newHeight {
             frame.size.height = newHeight
-            // No need to update layout after height adjustment
+            // Re-layout and redraw so the newly revealed line (e.g. after inserting a newline at the
+            // end of the document) is laid out and drawn immediately, instead of on the next edit.
+            didUpdate = true
         }
 
         if wrapLines && frame.size.width != availableSize.width {
