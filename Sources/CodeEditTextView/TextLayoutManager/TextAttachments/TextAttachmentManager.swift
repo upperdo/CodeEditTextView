@@ -72,6 +72,24 @@ public final class TextAttachmentManager {
         return attachment
     }
 
+    /// Adds an inlay hint at the given document offset. Hints are zero-length attachments that take up horizontal
+    /// space without modifying the document.
+    public func addInlayHint(_ hint: InlayHintAttachment, at offset: Int) {
+        add(hint, for: NSRange(location: offset, length: 0))
+    }
+
+    /// Removes every inlay hint previously added with ``addInlayHint(_:at:)``.
+    public func removeAllInlayHints() {
+        for attachment in orderedAttachments where attachment.attachment is InlayHintAttachment {
+            guard let index = orderedAttachments.firstIndex(of: attachment) else {
+                continue
+            }
+            orderedAttachments.remove(at: index)
+            layoutManager?.invalidateLayoutForRange(attachment.range)
+            delegate?.textAttachmentDidRemove(attachment.attachment, for: attachment.range)
+        }
+    }
+
     /// Finds attachments starting in the given line range, and returns them as an array.
     /// Returned attachment's ranges will be relative to the _document_, not the line.
     /// - Complexity: `O(n log(n))`, ideally `O(log(n))`
