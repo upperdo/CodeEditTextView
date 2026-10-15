@@ -28,7 +28,21 @@ extension TextView {
             view.removeFromSuperview()
         }
 
-        textStorage.addAttributes(typingAttributes, range: documentRange)
+        // Apply the default typing attributes only to text that isn't already styled. Adding them across the
+        // whole range would clobber syntax-highlight attributes when an editor is re-created for an already
+        // highlighted document (e.g. switching tabs), causing a flash while it re-highlights.
+        textStorage.beginEditing()
+        var unstyledRanges: [NSRange] = []
+        textStorage.enumerateAttribute(.font, in: documentRange, options: []) { value, range, _ in
+            if value == nil {
+                unstyledRanges.append(range)
+            }
+        }
+        for range in unstyledRanges {
+            textStorage.addAttributes(typingAttributes, range: range)
+        }
+        textStorage.endEditing()
+
         layoutManager.textStorage = textStorage
         layoutManager.reset()
         storageDelegate.addDelegate(layoutManager)
