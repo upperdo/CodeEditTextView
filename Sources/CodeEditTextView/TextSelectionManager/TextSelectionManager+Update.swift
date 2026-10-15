@@ -9,7 +9,10 @@ import Foundation
 
 extension TextSelectionManager {
     public func didReplaceCharacters(in range: NSRange, replacementLength: Int) {
-        let delta = replacementLength == 0 ? -range.length : replacementLength
+        // Net length change of the edit. A pure replacement changes length by
+        // `replacementLength - range.length` (not just `replacementLength`), otherwise selections after
+        // the edit drift by the length of the replaced text.
+        let delta = replacementLength - range.length
         for textSelection in self.textSelections {
             if textSelection.range.location > range.max {
                 // Entirely after the edit: shift it.
