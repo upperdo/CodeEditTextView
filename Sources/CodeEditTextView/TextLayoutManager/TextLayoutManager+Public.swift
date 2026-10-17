@@ -212,6 +212,7 @@ extension TextLayoutManager {
     ///   - line: The line to calculate rects for.
     /// - Returns: Multiple bounding rects. Will return one rect for each line fragment that overlaps the given range.
     public func rectsFor(range: NSRange) -> [CGRect] {
+        guard range.location >= 0, range.length > 0 else { return [] }
         return linesInRange(range).flatMap { self.rectsFor(range: range, in: $0) }
     }
 
@@ -222,6 +223,13 @@ extension TextLayoutManager {
     /// - Returns: Multiple bounding rects. Will return one rect for each line fragment that overlaps the given range.
     private func rectsFor(range: NSRange, in line: borrowing TextLineStorage<TextLine>.TextLinePosition) -> [CGRect] {
         guard let textStorage = (textStorage?.string as? NSString) else { return [] }
+
+        // Clamp to the text; empty/out-of-bounds ranges can't produce rects and would trap in
+        // `rangeOfComposedCharacterSequence(at:)` (e.g. index -1 for a zero-length range at 0).
+        let rangeLocation = max(0, range.location)
+        let rangeEnd = min(max(rangeLocation, NSMaxRange(range)), textStorage.length)
+        guard rangeEnd > rangeLocation else { return [] }
+        let range = NSRange(location: rangeLocation, length: rangeEnd - rangeLocation)
 
         // Don't make rects in between characters
         let realRangeStart = textStorage.rangeOfComposedCharacterSequence(at: range.lowerBound)
